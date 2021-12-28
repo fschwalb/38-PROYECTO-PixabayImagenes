@@ -1,10 +1,18 @@
 const resultado = document.querySelector('#resultado');
 const formulario = document.querySelector('#formulario');
+const paginacionDiv = document.querySelector('#paginacion');
 
+const registrosPorPagina = 40;
+let totalPaginas;
+let iterador;
+let paginaActual = 1;
+
+// Registramos el Submit para el Formulario
 window.onload = () => {
     formulario.addEventListener('submit', validarFormulario);
 }
 
+// Validamos el Formulario
 function validarFormulario( e ) {
     e.preventDefault();
 
@@ -16,7 +24,7 @@ function validarFormulario( e ) {
         return;
     }
 
-    buscarImagenes( terminoBusqueda );
+    buscarImagenes();
 };
 
 function mostrarAlerta( mensaje ) {
@@ -44,17 +52,34 @@ function mostrarAlerta( mensaje ) {
 
 };
 
-function buscarImagenes( termino ) {
+// Una vez pasada la validación buscamos imágenes
+function buscarImagenes() {
+
+    const termino = document.querySelector('#termino').value;
 
     const key = '24865845-a4191cf0b41050708f2e45ba5';
-    const url = `https://pixabay.com/api/?key=${ key }&q=${ termino }&per_page=100`;
+    const url = `https://pixabay.com/api/?key=${ key }&q=${ termino }&per_page=${ registrosPorPagina }&page=${ paginaActual }`;
 
     fetch(url)
         .then( respuesta => respuesta.json() )
         .then( resultado => {
+            totalPaginas = calcularPaginas( resultado.totalHits );
             mostrarImagenes( resultado.hits );
         })
 
+};
+
+// Generador que registra la cantidad de elementos de acuerdo a las páginas
+function *crearPaginador( total ) {
+
+    for (let i = 1; i <= total; i++) {
+        yield i;        
+    };
+
+};
+
+function calcularPaginas( total ) {
+    return parseInt( Math.ceil( total / registrosPorPagina ) );
 };
 
 function mostrarImagenes( imagenes ) {
@@ -92,5 +117,42 @@ function mostrarImagenes( imagenes ) {
         `;
 
     });
+
+    // Limpiar el paginador previo
+    while ( paginacionDiv.firstChild ) {
+        paginacionDiv.removeChild( paginacionDiv.firstChild );
+    };
+
+    // Generamos nuevo HTML
+
+    imprimirPaginador();
+    
+};
+
+
+function imprimirPaginador() {
+
+    iterador = crearPaginador( totalPaginas );
+
+    while ( true ) {
+        const { value, done } = iterador.next();
+
+        if( done ) return;
+
+        // Caso contrario, genera un botón por cada elemento en el generador
+        const boton = document.createElement('a');
+        boton.href = '#';
+        boton.dataset.pagina = value;
+        boton.textContent = value;
+        boton.classList.add( 'siguiente', 'bg-yellow-400', 'px-5', 'py-2', 'mr-2', 'font-bold', 'mb-4', 'rounded' );
+
+        boton.onclick = () => {
+            paginaActual = value;
+
+            buscarImagenes();
+        };
+
+        paginacionDiv.appendChild( boton );
+    };
 
 };
